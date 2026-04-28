@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Web Marker - 网页高亮标注
 // @namespace    https://github.com/user/web-marker
-// @version      0.1.0
+// @version      0.1.1
 // @description  在本地 HTML 文件上选中文字进行高亮/变色标注，刷新后自动恢复
 // @match        file:///*
 // @include      file://*
@@ -41,6 +41,67 @@
     trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>',
     close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>',
   };
+
+  // =========================================================================
+  //  Cursors – dynamic SVG cursors that change color with the active tool
+  // =========================================================================
+
+  function svgCursor(svg, hx, hy) {
+    return 'url("data:image/svg+xml,' + encodeURIComponent(svg) + '") ' + hx + ' ' + hy + ', crosshair';
+  }
+
+  function cursorBrush(color) {
+    return svgCursor(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32">' +
+      '<path d="M20 2L27 9L12 24L5 17Z" fill="#546E7A"/>' +
+      '<path d="M22 4L27 9L25 11L20 6Z" fill="#78909C"/>' +
+      '<path d="M12 24L5 17L2 27L4 30Z" fill="' + color + '"/>' +
+      '<path d="M5 17L12 24L10 26L3 19Z" fill="' + color + '" opacity="0.6"/>' +
+      '</svg>', 2, 30);
+  }
+
+  function cursorQuill(color) {
+    return svgCursor(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32">' +
+      '<path d="M28 1C21 5 13 13 8 23L10 25C15 15 21 7 28 1Z" fill="#A1887F" opacity="0.85"/>' +
+      '<path d="M28 1C25 3 22 7 20 11L24 7Z" fill="#BCAAA4"/>' +
+      '<path d="M8 23L4 31L6 31L10 25Z" fill="' + color + '"/>' +
+      '<circle cx="4" cy="31" r="1.2" fill="' + color + '"/>' +
+      '</svg>', 4, 31);
+  }
+
+  function cursorEraser() {
+    return svgCursor(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32">' +
+      '<path d="M4 11L26 5L30 17L8 23Z" fill="#F5F5F5" stroke="#B0BEC5" stroke-width="1" stroke-linejoin="round"/>' +
+      '<path d="M8 23L30 17L29 21L7 27Z" fill="#FF8A80" stroke="#EF9A9A" stroke-width="0.5" stroke-linejoin="round"/>' +
+      '<path d="M6 17L28 11" stroke="#CFD8DC" stroke-width="0.8"/>' +
+      '</svg>', 5, 27);
+  }
+
+  let _cursorStyleEl = null;
+
+  function updateCursor() {
+    if (!_cursorStyleEl) {
+      _cursorStyleEl = document.createElement('style');
+      _cursorStyleEl.id = 'wm-cursor-css';
+      document.head.appendChild(_cursorStyleEl);
+    }
+    if (!state.tool) {
+      _cursorStyleEl.textContent = '';
+      document.body.classList.remove('wm-active');
+      return;
+    }
+    document.body.classList.add('wm-active');
+    let cur;
+    if (state.tool === 'highlight') cur = cursorBrush(state.color || HIGHLIGHT_COLORS[0]);
+    else if (state.tool === 'textColor') cur = cursorQuill(state.color || TEXT_COLORS[0]);
+    else if (state.tool === 'eraser') cur = cursorEraser();
+    if (cur) {
+      _cursorStyleEl.textContent =
+        'body.wm-active,body.wm-active *{cursor:' + cur + ' !important}';
+    }
+  }
 
   // =========================================================================
   //  State
@@ -218,7 +279,7 @@
     s.id = 'wm-page-css';
     s.textContent = [
       '.' + HL_CLASS + '{border-radius:2px;padding:0 1px;transition:opacity .15s}',
-      'body.wm-eraser .' + HL_CLASS + '{cursor:pointer;outline:2px dashed rgba(255,82,82,.55);outline-offset:1px}',
+      'body.wm-eraser .' + HL_CLASS + '{outline:2px dashed rgba(255,82,82,.55);outline-offset:1px}',
       'body.wm-eraser .' + HL_CLASS + ':hover{outline:2px solid #ff5252;opacity:.65}',
     ].join('\n');
     document.head.appendChild(s);
@@ -235,7 +296,7 @@
       position:fixed;top:30%;right:12px;
       display:flex;flex-direction:column;align-items:center;gap:8px;
       font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-      z-index:2147483647;pointer-events:auto;
+      z-index:2147483647;pointer-events:auto;cursor:default;
     }
     .wm-btn{
       width:40px;height:40px;border-radius:50%;border:none;
@@ -336,6 +397,18 @@
     const toolBtns = { highlight: hlBtn.btn, textColor: tcBtn.btn, eraser: eraserBtn.btn };
     const colorRows = { highlight: hlColors, textColor: tcColors };
 
+    function deactivateTool() {
+      state.tool = null;
+      state.color = null;
+      document.body.classList.remove('wm-eraser');
+      Object.values(toolBtns).forEach(b => b.classList.remove('active'));
+      Object.values(colorRows).forEach(row => {
+        row.classList.remove('show');
+        row.querySelectorAll('.wm-dot').forEach(d => d.classList.remove('active'));
+      });
+      updateCursor();
+    }
+
     function selectTool(name) {
       if (name === 'clearAll') {
         if (state.annotations.length === 0) return;
@@ -343,19 +416,20 @@
         store.clear();
         return;
       }
-      const isSame = state.tool === name;
-      state.tool = isSame ? null : name;
+      if (state.tool === name) { deactivateTool(); return; }
+      state.tool = name;
       state.color = null;
-      document.body.classList.toggle('wm-eraser', state.tool === 'eraser');
-      Object.entries(toolBtns).forEach(([k, b]) => b.classList.toggle('active', k === state.tool));
+      document.body.classList.toggle('wm-eraser', name === 'eraser');
+      Object.entries(toolBtns).forEach(([k, b]) => b.classList.toggle('active', k === name));
       Object.entries(colorRows).forEach(([k, row]) => {
-        row.classList.toggle('show', k === state.tool);
+        row.classList.toggle('show', k === name);
         row.querySelectorAll('.wm-dot').forEach(d => d.classList.remove('active'));
       });
-      if (state.tool && colorRows[state.tool]) {
-        const first = colorRows[state.tool].querySelector('.wm-dot');
+      if (colorRows[name]) {
+        const first = colorRows[name].querySelector('.wm-dot');
         if (first) { first.classList.add('active'); state.color = first.dataset.color; }
       }
+      updateCursor();
     }
 
     Object.keys(toolBtns).forEach(name => {
@@ -369,10 +443,11 @@
         row.querySelectorAll('.wm-dot').forEach(d => d.classList.remove('active'));
         dot.classList.add('active');
         state.color = dot.dataset.color;
+        updateCursor();
       });
     });
 
-    uiRefs = { host, shadow, wrap, toggleBtn, panel, toolBtns, colorRows };
+    uiRefs = { host, shadow, wrap, toggleBtn, panel, toolBtns, colorRows, deactivate: deactivateTool };
     return uiRefs;
   }
 
@@ -519,6 +594,12 @@
     restore();
     document.addEventListener('mouseup', onMouseUp, true);
     document.addEventListener('click', onPageClick, true);
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && state.tool) {
+        e.preventDefault();
+        if (uiRefs) uiRefs.deactivate();
+      }
+    }, true);
   }
 
   init();
