@@ -1,5 +1,3 @@
-import { HIGHLIGHT_COLORS, TEXT_COLORS } from './core';
-
 function svgCursor(svg: string, hx: number, hy: number): string {
   return 'url("data:image/svg+xml,' + encodeURIComponent(svg) + '") ' + hx + ' ' + hy + ', crosshair';
 }
@@ -33,26 +31,40 @@ export function cursorEraser(): string {
     '</svg>', 5, 27);
 }
 
+export function cursorBrushHighlight(color: string): string {
+  return svgCursor(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32">' +
+    '<rect x="8" y="2" width="14" height="22" rx="2" fill="#78909C" opacity="0.9"/>' +
+    '<rect x="10" y="0" width="10" height="6" rx="1" fill="#90A4AE"/>' +
+    '<rect x="7" y="22" width="16" height="8" rx="1" fill="' + color + '" opacity="0.8"/>' +
+    '<rect x="9" y="24" width="12" height="4" rx="0.5" fill="' + color + '" opacity="0.5"/>' +
+    '</svg>', 15, 31);
+}
+
+export function cursorUnderline(color: string): string {
+  return svgCursor(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32">' +
+    '<path d="M6 4L6 20" stroke="#78909C" stroke-width="1.5" stroke-linecap="round"/>' +
+    '<path d="M5 28L27 28" stroke="' + color + '" stroke-width="2.5" stroke-linecap="round"/>' +
+    '<path d="M4 4L8 4" stroke="#90A4AE" stroke-width="1" stroke-linecap="round"/>' +
+    '<circle cx="6" cy="2" r="1.2" fill="#B0BEC5"/>' +
+    '</svg>', 6, 30);
+}
+
 let _cursorStyleEl: HTMLStyleElement | null = null;
 
-export function updateCursor(tool: string | null, color: string | null): void {
+export function updateCursorCSS(cursorValue: string | null): void {
   if (!_cursorStyleEl) {
     _cursorStyleEl = document.createElement('style');
     _cursorStyleEl.id = 'wm-cursor-css';
     document.head.appendChild(_cursorStyleEl);
   }
-  if (!tool) {
+  if (!cursorValue) {
     _cursorStyleEl.textContent = '';
     document.body.classList.remove('wm-active');
     return;
   }
   document.body.classList.add('wm-active');
-  let cur: string | undefined;
-  if (tool === 'highlight') cur = cursorBrush(color || HIGHLIGHT_COLORS[0]);
-  else if (tool === 'textColor') cur = cursorQuill(color || TEXT_COLORS[0]);
-  else if (tool === 'eraser') cur = cursorEraser();
-  if (cur) {
-    _cursorStyleEl.textContent =
-      'body.wm-active,body.wm-active *{cursor:' + cur + ' !important}';
-  }
+  _cursorStyleEl.textContent =
+    'body.wm-active,body.wm-active *{cursor:' + cursorValue + ' !important}';
 }

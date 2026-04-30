@@ -25,7 +25,7 @@
 
     <div class="stats">
       <div class="stat-row">
-        <span class="stat-label">当前页面标注</span>
+        <span class="stat-label" data-i18n="popup.pageAnnotations"></span>
         <span class="stat-value" id="count">—</span>
       </div>
     </div>
@@ -33,16 +33,72 @@
     <div class="divider"></div>
 
     <div class="toggle-row">
-      <span class="toggle-label">启用标注</span>
+      <span class="toggle-label" data-i18n="popup.enableAnnotation"></span>
       <label class="switch">
         <input type="checkbox" id="toggle" checked />
         <span class="slider"></span>
       </label>
     </div>
 
-    <p class="hint">
-      提示：本地文件需在扩展详情页开启「允许访问文件网址」
-    </p>
+    <div class="divider"></div>
+
+    <div class="data-row">
+      <button class="data-btn" id="export-btn" data-i18n="popup.export"></button>
+      <button class="data-btn" id="import-btn" data-i18n="popup.import"></button>
+      <input type="file" id="import-file" accept=".json" style="display:none" />
+    </div>
+
+    <div class="divider"></div>
+
+    <div id="pro-section">
+      <div id="pro-free" class="pro-row">
+        <span class="pro-label" data-i18n="popup.freeVersion"></span>
+        <button class="pro-btn" id="pro-activate-btn" data-i18n="popup.activatePro"></button>
+      </div>
+      <div id="pro-active" class="pro-row" style="display:none">
+        <span class="pro-label pro-badge">Pro</span>
+        <span class="pro-email" id="pro-email"></span>
+      </div>
+      <div id="pro-input-row" class="pro-input-row" style="display:none">
+        <input type="email" id="pro-email-input" class="pro-field" />
+        <input type="text" id="pro-key-input" class="pro-field" />
+        <button class="data-btn" id="pro-submit-btn" data-i18n="popup.verify"></button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="lang-row">
+      <span class="lang-label" data-i18n="popup.language"></span>
+      <select id="lang-select" class="lang-select">
+        <option value="zh">中文</option>
+        <option value="en">English</option>
+      </select>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="shortcuts">
+      <div class="shortcuts-title" data-i18n="popup.shortcutsTitle"></div>
+      <div class="shortcut-item">
+        <kbd>Esc</kbd>
+        <span data-i18n="popup.escHint"></span>
+      </div>
+      <div class="shortcut-item">
+        <span class="shortcut-key" data-i18n="popup.rightClick"></span>
+        <span data-i18n="popup.rightClickHint"></span>
+      </div>
+      <div class="shortcut-item">
+        <span class="shortcut-key" data-i18n="popup.leftClick"></span>
+        <span data-i18n="popup.leftClickHint"></span>
+      </div>
+      <div class="shortcut-item">
+        <span class="shortcut-key" data-i18n="popup.dragFab"></span>
+        <span data-i18n="popup.dragFabHint"></span>
+      </div>
+    </div>
+
+    <p class="hint" data-i18n="popup.fileUrlHint"></p>
   </div>
   <script type="module" src="./main.ts"></script>
 </body>

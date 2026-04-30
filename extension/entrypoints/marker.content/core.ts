@@ -6,9 +6,6 @@ export const HL_CLASS = 'wm-hl';
 export const ATTR_ID = 'data-wm-id';
 export const CTX = 30;
 
-export const HIGHLIGHT_COLORS = ['#FFF176', '#A5D6A7', '#F48FB1', '#81D4FA', '#FFCC80'];
-export const TEXT_COLORS = ['#E53935', '#1E88E5', '#43A047', '#8E24AA', '#EF6C00'];
-
 const BLOCK_TAGS = new Set([
   'p', 'div', 'li', 'ol', 'ul', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
   'blockquote', 'pre', 'section', 'article', 'main', 'nav', 'aside',
@@ -16,13 +13,11 @@ const BLOCK_TAGS = new Set([
   'body', 'dd', 'dt', 'dl', 'figure', 'figcaption', 'details', 'summary',
 ]);
 
-export const ICONS: Record<string, string> = {
+export const ICONS = {
   pen: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>',
-  highlight: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
-  textColor: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 20h12"/><path d="M12 4l-5 12h2.5l1.2-3h4.6l1.2 3H19L14 4h-4z" fill="currentColor" stroke="none"/></svg>',
-  eraser: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20H7.5l-3.2-3.2a2 2 0 0 1 0-2.8L14.8 3.5a2 2 0 0 1 2.8 0l3.9 3.9a2 2 0 0 1 0 2.8L11 20"/><path d="M6 14l8-8"/></svg>',
   trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>',
   close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>',
+  more: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>',
 };
 
 // =========================================================================
@@ -33,6 +28,7 @@ export interface Annotation {
   id: string;
   type: string;
   color: string;
+  style?: string;
   xpath: string;
   s: number;
   e: number;
@@ -130,12 +126,21 @@ export function buildRanges(anchorEl: Node, startOff: number, endOff: number): R
 //  Highlight DOM manipulation
 // =========================================================================
 
-export function wrapRanges(ranges: Range[], id: string, type: string, color: string): void {
+export function wrapRanges(
+  ranges: Range[],
+  id: string,
+  type: string,
+  color: string,
+  style?: string,
+  applyFn?: (span: HTMLSpanElement, color: string, style?: string) => void,
+): void {
   for (let i = ranges.length - 1; i >= 0; i--) {
     const span = document.createElement('span');
     span.className = HL_CLASS;
     span.setAttribute(ATTR_ID, id);
-    if (type === 'highlight') {
+    if (applyFn) {
+      applyFn(span, color, style);
+    } else if (type === 'highlight') {
       span.style.backgroundColor = color;
     } else {
       span.style.color = color;

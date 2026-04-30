@@ -6,8 +6,14 @@ import {
 import type { Annotation } from './core';
 import { createUI } from './ui';
 import type { UIRefs } from './ui';
+import { createMiniToolbar } from './mini-toolbar';
+import type { MiniToolbarRefs } from './mini-toolbar';
 import { createState } from './state';
-import { loadAnnotations, saveAnnotations, clearAnnotations } from './store';
+import type { ToolConfig } from './state';
+import { loadAnnotations, saveAnnotations, clearAnnotations, loadPreferences, savePreferences } from './store';
+import { getTool } from './tools';
+import { getProStatus } from './pro';
+import { setLocale, detectLocale } from './i18n';
 import { storage } from 'wxt/utils/storage';
 
 const enabledItem = storage.defineItem<boolean>('local:wm::enabled', {
@@ -23,47 +29,67 @@ export default defineContentScript({
     if (!enabled) return;
 
     const state = createState();
+    state.prefs = await loadPreferences();
+    setLocale(state.prefs.locale || detectLocale());
+    await getProStatus();
+
     let uiRefs: UIRefs | null = null;
+    let miniRefs: MiniToolbarRefs | null = null;
 
     injectPageCSS();
 
-    uiRefs = createUI(state, async () => {
-      await clearAnnotations(state);
-    });
+    uiRefs = createUI(
+      state,
+      async () => { await clearAnnotations(state); },
+      (_toolName, _color) => { savePreferences(state.prefs); },
+      (toolName, color, style) => { applyAnnotation(toolName, color, style); },
+    );
+
+    miniRefs = createMiniToolbar(
+      state,
+      (toolName: string, config: ToolConfig) => {
+        applyAnnotation(toolName, config.color, config.style);
+      },
+      () => {
+        uiRefs?.openPanel();
+      },
+    );
 
     await restore();
 
     document.addEventListener('mouseup', onMouseUp, true);
     document.addEventListener('click', onPageClick, true);
+    document.addEventListener('mousedown', onMouseDown, true);
     document.addEventListener('keydown', (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && state.tool) {
-        e.preventDefault();
-        uiRefs?.deactivate();
+      if (e.key === 'Escape') {
+        if (state.tool) {
+          e.preventDefault();
+          uiRefs?.deactivate();
+        } else if (state.open) {
+          e.preventDefault();
+          uiRefs?.closePanel();
+        }
+        if (miniRefs?.isVisible()) {
+          miniRefs.hide();
+        }
       }
     }, true);
 
     browser.runtime.onMessage.addListener((msg: any) => {
       if (msg?.type === 'wm:toggle') {
-        if (msg.enabled === false && uiRefs) {
-          uiRefs.host.style.display = 'none';
-          uiRefs.deactivate();
+        if (msg.enabled === false) {
+          if (uiRefs) {
+            uiRefs.host.style.display = 'none';
+            uiRefs.deactivate();
+          }
+          miniRefs?.hide();
         } else if (msg.enabled === true && uiRefs) {
           uiRefs.host.style.display = '';
         }
       }
     });
 
-    // =====================================================================
-    //  Selection → annotation
-    // =====================================================================
-
-    function onMouseUp(e: MouseEvent) {
-      if (!state.tool || state.tool === 'eraser') return;
-      if (!state.color) return;
-
-      const wmRoot = document.getElementById('wm-root');
-      if (wmRoot && wmRoot.contains(e.target as Node)) return;
-
+    function applyAnnotation(toolName: string, color: string, style?: string) {
       const sel = window.getSelection();
       if (!sel || sel.isCollapsed || !sel.rangeCount) return;
 
@@ -72,17 +98,19 @@ export default defineContentScript({
       if (!text.trim()) return;
 
       const anchor = findAnchorElement(range.commonAncestorContainer);
-
       const sOff = charOffsetIn(anchor, range.startContainer, range.startOffset);
       const eOff = charOffsetIn(anchor, range.endContainer, range.endOffset);
       if (sOff == null || eOff == null || sOff >= eOff) return;
 
       const full = anchor.textContent!;
       const id = 'wm' + Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
+
+      const tool = getTool(toolName);
       const ann: Annotation = {
         id,
-        type: state.tool,
-        color: state.color,
+        type: toolName,
+        color,
+        style: style || undefined,
         xpath: getXPath(anchor),
         s: sOff,
         e: eOff,
@@ -95,16 +123,58 @@ export default defineContentScript({
       const ranges = buildRanges(anchor, sOff, eOff);
       if (ranges.length === 0) return;
 
-      wrapRanges(ranges, id, state.tool, state.color);
+      wrapRanges(ranges, id, toolName, color, style, tool?.apply);
       state.annotations.push(ann);
       saveAnnotations(state);
+
+      if (!state.prefs.firstAnnotationDone) {
+        state.prefs.firstAnnotationDone = true;
+        savePreferences(state.prefs);
+      }
 
       sel.removeAllRanges();
     }
 
-    // =====================================================================
-    //  Eraser click
-    // =====================================================================
+    function onMouseUp(e: MouseEvent) {
+      const wmRoot = document.getElementById('wm-root');
+      if (wmRoot && wmRoot.contains(e.target as Node)) return;
+      const wmMini = document.getElementById('wm-mini-root');
+      if (wmMini && wmMini.contains(e.target as Node)) return;
+
+      if (state.annotateMode && state.tool && state.tool !== 'eraser' && state.color) {
+        applyAnnotation(state.tool, state.color, state.style || undefined);
+        return;
+      }
+
+      setTimeout(() => {
+        const sel = window.getSelection();
+        if (!sel || sel.isCollapsed || !sel.rangeCount) {
+          miniRefs?.hide();
+          return;
+        }
+
+        const text = sel.toString().trim();
+        if (!text) {
+          miniRefs?.hide();
+          return;
+        }
+
+        if (state.annotateMode) return;
+
+        const range = sel.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        miniRefs?.show(rect);
+      }, 10);
+    }
+
+    function onMouseDown(e: MouseEvent) {
+      const wmMini = document.getElementById('wm-mini-root');
+      if (wmMini && wmMini.contains(e.target as Node)) return;
+
+      if (miniRefs?.isVisible()) {
+        miniRefs.hide();
+      }
+    }
 
     function onPageClick(e: MouseEvent) {
       if (state.tool !== 'eraser') return;
@@ -122,10 +192,6 @@ export default defineContentScript({
       state.annotations = state.annotations.filter(a => a.id !== id);
       saveAnnotations(state);
     }
-
-    // =====================================================================
-    //  Restore on load
-    // =====================================================================
 
     async function restore() {
       const saved = await loadAnnotations();
@@ -146,7 +212,8 @@ export default defineContentScript({
 
         const ranges = buildRanges(el, sOff, eOff);
         if (ranges.length > 0) {
-          wrapRanges(ranges, ann.id, ann.type, ann.color);
+          const tool = getTool(ann.type);
+          wrapRanges(ranges, ann.id, ann.type, ann.color, ann.style, tool?.apply);
           state.annotations.push(ann);
         }
       }

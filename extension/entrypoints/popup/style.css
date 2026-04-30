@@ -135,6 +135,156 @@ input:checked + .slider::before {
   transform: translateX(18px);
 }
 
+.data-row {
+  display: flex;
+  gap: 8px;
+}
+
+.data-btn {
+  flex: 1;
+  height: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.data-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.data-btn:active {
+  transform: scale(0.96);
+}
+
+.pro-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 0;
+}
+
+.pro-label {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.pro-badge {
+  background: linear-gradient(135deg, #FFD54F, #FF8F00);
+  color: #1c1c1e;
+  font-weight: 700;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.pro-email {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.pro-btn {
+  height: 26px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: 6px;
+  background: rgba(255, 215, 0, 0.08);
+  color: #FFD54F;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.pro-btn:hover {
+  background: rgba(255, 215, 0, 0.15);
+}
+
+.pro-input-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.pro-field {
+  height: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-size: 12px;
+  padding: 0 8px;
+  outline: none;
+}
+
+.pro-field:focus {
+  border-color: #FFD54F;
+}
+
+.lang-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 0;
+}
+
+.lang-label {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.lang-select {
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 12px;
+  cursor: pointer;
+  outline: none;
+}
+
+.lang-select:focus {
+  border-color: #64B5F6;
+}
+
+.shortcuts {
+  padding: 2px 0;
+}
+
+.shortcuts-title {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.shortcut-item {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  line-height: 1.6;
+}
+
+.shortcut-item kbd,
+.shortcut-key {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.65);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+  padding: 0 4px;
+  font-family: inherit;
+}
+
 .hint {
   font-size: 11px;
   color: rgba(255, 255, 255, 0.25);
